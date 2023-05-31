@@ -41,15 +41,14 @@ float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCente
     const TVector closestPoint = Clamp(SphereCenter, Box.Min, Box.Max);
     if (Distance(closestPoint, SphereCenter) > SphereRadius) {
         return Distance(closestPoint, SphereCenter) - SphereRadius;
-    } else {
-        return 0.0f;
     }
+    return 0.0f;
 }
 
 template <typename TQuery, typename TVector>
-concept IsQuery = requires(TQuery q) {
-    { q.IsInside(TVector()) } -> std::convertible_to<bool>;
-    { q.Covers(Boundary<TVector>()) } -> std::convertible_to<bool>;
+concept IsQuery = requires(TQuery Query) {
+    { Query.IsInside(TVector()) } -> std::convertible_to<bool>;
+    { Query.Covers(Boundary<TVector>()) } -> std::convertible_to<bool>;
 };
 
 template <VectorLike TVector>
@@ -68,10 +67,10 @@ struct QueryRadius {
 
 template <VectorLike TVector>
 struct QueryAll {
-    bool IsInside(const TVector&) const {
+    bool IsInside([[maybe_unused]] const TVector& Vector) const {
         return true;
     }
-    bool Covers(const Boundary<TVector>&) const {
+    bool Covers([[maybe_unused]] const Boundary<TVector>& Boundary) const {
         return true;
     }
 };

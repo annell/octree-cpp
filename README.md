@@ -8,15 +8,25 @@ From [Wikipedia](https://en.wikipedia.org/wiki/Octree):
 
 # To install
 ## Header only method
-1. Clone `OctreeCpp.h` to your project and include header.
+1. Copy `OctreeCpp.h` to your project and include header.
 
 ### Dependencies
 - C++20
 
 ## To run test suite
-1. Clone `OctreeCpp.h` to your project.
+1. Clone repo to your project.
 2. Install dependencies.
 3. Include the CMakeList in your cmake structure.
+4. Build & run octree-cpp_test.
+
+## To run example
+1. Clone repo to your project with submodules recursively `git clone --recurse-submodules`
+2. Install dependencies.
+3. Include the CMakeList in your cmake structure.
+4. Build & run octree-cpp_demo.
+
+And see the following results:
+![sphere-query-example.png](example%2Fsphere-query-example.png)
 
 ### Dependencies
 - C++20
