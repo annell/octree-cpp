@@ -2,12 +2,13 @@
 // Created by Stefan Annell on 2023-05-20.
 //
 
-#include "OctreeCpp.h"
+#include "src/OctreeCpp.h"
 #include <gtest/gtest.h>
 #include <random>
 
 struct vec {
     float x, y, z;
+    auto operator<=>(const vec&) const = default;
 };
 
 TEST(OctreeCppTest, VectorLikeConcept) {
@@ -97,6 +98,36 @@ TEST(OctreeCppTest, OctreeQueryCircleHit) {
 
     octree.Add(DataWrapper<vec, float>{{0.5f, 0.5f, 0.5f}, 1.0f});
     EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 1);
+}
+
+TEST(OctreeCppTest, OctreeQueryCircleHitNegative) {
+    OctreeCpp<vec, float> octree({{-100, -100, -100}, {100, 100, 100}});
+    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+
+    octree.Add(DataWrapper<vec, float>{{-20.0f, -20.5f, -10.5f}, 1.0f});
+    octree.Add(DataWrapper<vec, float>{{-5.0f, -20.5f, -10.5f}, 1.0f});
+    octree.Add(DataWrapper<vec, float>{{-5.0f, -5.5f, -5.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(QueryRadius<vec>{{-20.0f, -70.0f, -10.5f}, 50.0f}).size(), 1);
+}
+
+TEST(OctreeCppTest, OctreeQueryCircleHitNegativeFullOctree) {
+    OctreeCpp<vec, int> octree({{-100, -100, -100}, {100, 100, 100}});
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(-90.0f, 100.0f);
+    for (int i = 0; i < 10000; i++) {
+        DataWrapper<vec, int> data = {{dis(gen), dis(gen), dis(gen)}, i};
+        octree.Add(data);
+    }
+
+    EXPECT_EQ(octree.Query(QueryAll<vec>{}).size(), 10000);
+
+    octree.Add(DataWrapper<vec, int>{{-99.0f, -100.0f, -100.0f}, -1});
+    octree.Add(DataWrapper<vec, int>{{-95.0f, -100.0f, -100.0f}, -2});
+    octree.Add(DataWrapper<vec, int>{{-96.0f, -100.0f, -100.0f}, -3});
+    octree.Add(DataWrapper<vec, int>{{-97.0f, -100.0f, -100.0f}, -4});
+    EXPECT_EQ(octree.Query(QueryRadius<vec>{{-145.0f, -100.0f, -100.0f}, 50.0f}).size(), 4);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleMiss) {

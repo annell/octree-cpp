@@ -4,55 +4,47 @@
 #include <memory>
 
 template <typename TVector>
-concept VectorLike = requires(TVector v) {
-    { v.x } -> std::convertible_to<float>;
-    { v.y } -> std::convertible_to<float>;
-    { v.z } -> std::convertible_to<float>;
+concept VectorLike = requires(TVector Vector) {
+    { Vector.x } -> std::convertible_to<float>;
+    { Vector.y } -> std::convertible_to<float>;
+    { Vector.z } -> std::convertible_to<float>;
 };
 
 template <VectorLike TVector>
 struct Boundary {
-    TVector Min;
-    TVector Max;
-
-    constexpr TVector GetTopLeftFront() const {
-        return {Min.x, Max.y, Max.z};
-    }
-
-    constexpr TVector GetTopRightFront() const {
-        return {Max.x, Max.y, Max.z};
-    }
-
-    constexpr TVector GetTopLeftBack() const {
-        return {Min.x, Min.y, Max.z};
-    }
-
-    constexpr TVector GetTopRightBack() const {
-        return {Max.x, Min.y, Max.z};
-    }
-
-    constexpr TVector GetBottomLeftFront() const {
-        return {Min.x, Max.y, Min.z};
-    }
-
-    constexpr TVector GetBottomRightFront() const {
-        return {Max.x, Max.y, Min.z};
-    }
-
-    constexpr TVector GetBottomLeftBack() const {
-        return {Min.x, Min.y, Min.z};
-    }
-
-    constexpr TVector GetBottomRightBack() const {
-        return {Max.x, Min.y, Min.z};
-    }
-
-    bool IsInside(const TVector& Vector) const {
-        return Min.x <= Vector.x && Vector.x <= Max.x &&
-               Min.y <= Vector.y && Vector.y <= Max.y &&
-               Min.z <= Vector.z && Vector.z <= Max.z;
-    }
+    const TVector Min = {0, 0, 0};
+    const TVector Max = {0, 0, 0};
 };
+
+template<typename TVector>
+bool IsPointInBoundrary(const TVector& Point, const Boundary<TVector>& Bound) {
+    return Point.x >= Bound.Min.x && Point.x <= Bound.Max.x &&
+           Point.y >= Bound.Min.y && Point.y <= Bound.Max.y &&
+           Point.z >= Bound.Min.z && Point.z <= Bound.Max.z;
+}
+
+template<typename TVector>
+float Distance(const TVector& Point1, const TVector& Point2) {
+    float diffX = Point1.x - Point2.x;
+    float diffY = Point1.y - Point2.y;
+    float diffZ = Point1.z - Point2.z;
+    return std::sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ);
+}
+
+template<typename TVector>
+TVector Clamp(const TVector& Value, const TVector& Min, const TVector& Max) {
+    return std::min(std::max(Value, Min), Max);
+}
+
+template<typename TVector>
+float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCenter, float SphereRadius) {
+    const TVector closestPoint = Clamp(SphereCenter, Box.Min, Box.Max);
+    if (Distance(closestPoint, SphereCenter) > SphereRadius) {
+        return Distance(closestPoint, SphereCenter) - SphereRadius;
+    } else {
+        return 0.0f;
+    }
+}
 
 template <typename TQuery, typename TVector>
 concept IsQuery = requires(TQuery q) {
@@ -62,29 +54,25 @@ concept IsQuery = requires(TQuery q) {
 
 template <VectorLike TVector>
 struct QueryRadius {
-    TVector Midpoint;
-    float Radius;
-
-    float Distance(const TVector& Point1, const TVector& Point2) const {
-        float dx = Point1.x - Point2.x;
-        float dy = Point1.y - Point2.y;
-        float dz = Point1.z - Point2.z;
-        return std::sqrt(dx * dx + dy * dy + dz * dz);
-    }
+    const TVector Midpoint = {0, 0, 0};
+    const float Radius = 0.0f;
 
     bool IsInside(const TVector& Point) const {
         return Distance(Midpoint, Point) <= Radius;
     }
 
     bool Covers(const Boundary<TVector>& Boundary) const {
-        return Distance(Midpoint, Boundary.GetTopLeftFront()) <= Radius ||
-               Distance(Midpoint, Boundary.GetTopRightFront()) <= Radius ||
-               Distance(Midpoint, Boundary.GetTopLeftBack()) <= Radius ||
-               Distance(Midpoint, Boundary.GetTopRightBack()) <= Radius ||
-               Distance(Midpoint, Boundary.GetBottomLeftFront()) <= Radius ||
-               Distance(Midpoint, Boundary.GetBottomRightFront()) <= Radius ||
-               Distance(Midpoint, Boundary.GetBottomLeftBack()) <= Radius ||
-               Distance(Midpoint, Boundary.GetBottomRightBack()) <= Radius;
+        return DistanceBoxSphere(Boundary, Midpoint, Radius) <= 0.0f;
+    }
+};
+
+template <VectorLike TVector>
+struct QueryAll {
+    bool IsInside(const TVector&) const {
+        return true;
+    }
+    bool Covers(const Boundary<TVector>&) const {
+        return true;
     }
 };
 
@@ -97,7 +85,8 @@ struct DataWrapper {
 template <VectorLike TVector, typename TData>
 class OctreeCpp {
 private:
-    static constexpr int MaxData = 8;
+    static constexpr size_t MaxData = 8;
+    static constexpr size_t NrChildren = 8;
     enum class Octant {
         TopLeftFront = 0,
         TopRightFront,
@@ -113,7 +102,7 @@ public:
     }
 
     void Add(const DataWrapper<TVector, TData>& DataWrapper) {
-        if (!Boundary.IsInside(DataWrapper.Vector)) {
+        if (!IsPointInBoundrary(DataWrapper.Vector, Boundary)) {
             throw std::runtime_error("Vector is outside of boundary");
         }
 
@@ -150,7 +139,7 @@ public:
         return result;
     }
 
-    size_t Size() const {
+    [[nodiscard]] size_t Size() const {
         return NrObjects;
     }
 
@@ -228,19 +217,19 @@ private:
         return Children.at(index) != nullptr;
     }
 
-    bool ValidateInvariant() const {
+    [[nodiscard]] bool ValidateInvariant() const {
         if (Data.size() > MaxData) {
             return false;
         }
         for (const auto& data : Data) {
-            if (!Boundary.IsInside(data.Vector)) {
+            if (!IsPointInBoundrary(data.Vector, Boundary)) {
                 return false;
             }
         }
         return true;
     }
 
-    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, 8> Children;
+    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, NrChildren> Children;
     std::vector<DataWrapper<TVector, TData>> Data;
     Boundary<TVector> Boundary;
     size_t NrObjects = 0;
