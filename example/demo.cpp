@@ -26,7 +26,7 @@ void app1() {
         octree.Add(data);
     }
     {
-        auto pointsWrapper = octree.Query(QueryAll<glm::vec3>{});
+        auto pointsWrapper = octree.Query(AllQuery<glm::vec3>{});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -38,7 +38,7 @@ void app1() {
     }
     {
         glm::vec3 midpoint = {10.0f, 10.0f, 10.0f};
-        auto pointsWrapper = octree.Query(QueryRadius<glm::vec3>{midpoint, 50.0f});
+        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, 50.0f});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -59,7 +59,7 @@ void app1() {
     }
     {
         glm::vec3 midpoint = {-10.0f, -10.0f, -10.0f};
-        auto pointsWrapper = octree.Query(QueryRadius<glm::vec3>{midpoint, 50.0f});
+        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, 50.0f});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -97,7 +97,7 @@ void mySubroutine() {
         octree.Add(data);
     }
     {
-        auto pointsWrapper = octree.Query(QueryAll<glm::vec3>{});
+        auto pointsWrapper = octree.Query(AllQuery<glm::vec3>{});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -107,7 +107,7 @@ void mySubroutine() {
         cloud->setPointRenderMode(polyscope::PointRenderMode::Sphere);
     }
     {
-        auto pointsWrapper = octree.Query(QueryRadius<glm::vec3>{midpoint, radius});
+        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, radius});
 
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {

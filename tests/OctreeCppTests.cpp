@@ -27,10 +27,10 @@ TEST(OctreeCppTest, DataWrapperConcept) {
 }
 
 TEST(OctreeCppTest, IsQueryConcept) {
-    static_assert(IsQuery<QueryRadius<vec>, vec>);
+    static_assert(IsQuery<SphereQuery<vec>, vec>);
     static_assert(not IsQuery<float, vec>);
-    static_assert(not IsQuery<QueryRadius<vec>, float>);
-    [[maybe_unused]] QueryRadius<vec> query;
+    static_assert(not IsQuery<SphereQuery<vec>, float>);
+    [[maybe_unused]] SphereQuery<vec> query;
 }
 
 TEST(OctreeCppTest, OctreeConstructible) {
@@ -87,27 +87,27 @@ TEST(OctreeCppTest, OctreeAddMany) {
 
 TEST(OctreeCppTest, OctreeQueryCircleEmpty) {
     OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    QueryRadius<vec> query = {{0.5f, 0.5f, 0.5f}, 0.5f};
+    SphereQuery<vec> query = {{0.5f, 0.5f, 0.5f}, 0.5f};
     auto result = octree.Query(query);
     EXPECT_EQ(result.size(), 0);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHit) {
     OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
     octree.Add(DataWrapper<vec, float>{{0.5f, 0.5f, 0.5f}, 1.0f});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 1);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHitNegative) {
     OctreeCpp<vec, float> octree({{-100, -100, -100}, {100, 100, 100}});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
     octree.Add(DataWrapper<vec, float>{{-20.0f, -20.5f, -10.5f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{-5.0f, -20.5f, -10.5f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{-5.0f, -5.5f, -5.5f}, 1.0f});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{-20.0f, -70.0f, -10.5f}, 50.0f}).size(), 1);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{-20.0f, -70.0f, -10.5f}, 50.0f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHitNegativeFullOctree) {
@@ -121,18 +121,18 @@ TEST(OctreeCppTest, OctreeQueryCircleHitNegativeFullOctree) {
         octree.Add(data);
     }
 
-    EXPECT_EQ(octree.Query(QueryAll<vec>{}).size(), 10000);
+    EXPECT_EQ(octree.Query(AllQuery<vec>{}).size(), 10000);
 
     octree.Add(DataWrapper<vec, int>{{-99.0f, -100.0f, -100.0f}, -1});
     octree.Add(DataWrapper<vec, int>{{-95.0f, -100.0f, -100.0f}, -2});
     octree.Add(DataWrapper<vec, int>{{-96.0f, -100.0f, -100.0f}, -3});
     octree.Add(DataWrapper<vec, int>{{-97.0f, -100.0f, -100.0f}, -4});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{-145.0f, -100.0f, -100.0f}, 50.0f}).size(), 4);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{-145.0f, -100.0f, -100.0f}, 50.0f}).size(), 4);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleMiss) {
     OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
     octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
@@ -142,14 +142,14 @@ TEST(OctreeCppTest, OctreeQueryCircleMiss) {
     octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 1.5f}).size(), 8);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 1.5f}).size(), 8);
 }
 
 TEST(OctreeCppTest, OctreeQueryOutsideBoundary) {
     OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
     octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
@@ -159,12 +159,12 @@ TEST(OctreeCppTest, OctreeQueryOutsideBoundary) {
     octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.0f, 0.0f, -0.1f}, 0.5f}).size(), 1);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.0f, 0.0f, -0.1f}, 0.5f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryRand) {
     OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
     octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
@@ -174,7 +174,7 @@ TEST(OctreeCppTest, OctreeQueryRand) {
     octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
     octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.9f}).size(), 8);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.9f}).size(), 8);
 }
 
 TEST(OctreeCppTest, OctreeQueryMany) {
@@ -192,7 +192,7 @@ TEST(OctreeCppTest, OctreeQueryMany) {
         octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
     }
 
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.5f, 0.5f, 0.5f}, 0.1f}).size(), 1);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.1f}).size(), 1);
     EXPECT_EQ(octree.Size(), 8001);
-    EXPECT_EQ(octree.Query(QueryRadius<vec>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
+    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
 }

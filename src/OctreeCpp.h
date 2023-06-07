@@ -52,7 +52,7 @@ concept IsQuery = requires(TQuery Query) {
 };
 
 template <VectorLike TVector>
-struct QueryRadius {
+struct SphereQuery {
     const TVector Midpoint = {0, 0, 0};
     const float Radius = 0.0f;
 
@@ -66,7 +66,7 @@ struct QueryRadius {
 };
 
 template <VectorLike TVector>
-struct QueryAll {
+struct AllQuery {
     bool IsInside([[maybe_unused]] const TVector& Vector) const {
         return true;
     }
