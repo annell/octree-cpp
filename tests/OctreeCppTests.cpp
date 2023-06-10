@@ -11,6 +11,8 @@ struct vec {
     auto operator<=>(const vec&) const = default;
 };
 
+using BasicOctree = OctreeCpp<vec, float>;
+
 TEST(OctreeCppTest, VectorLikeConcept) {
     static_assert(VectorLike<vec>);
     static_assert(not VectorLike<float>);
@@ -27,87 +29,87 @@ TEST(OctreeCppTest, DataWrapperConcept) {
 }
 
 TEST(OctreeCppTest, IsQueryConcept) {
-    static_assert(IsQuery<SphereQuery<vec>, vec>);
+    static_assert(IsQuery<SphereQuery<BasicOctree::TDataWrapper>, BasicOctree::TDataWrapper>);
     static_assert(not IsQuery<float, vec>);
-    static_assert(not IsQuery<SphereQuery<vec>, float>);
-    [[maybe_unused]] SphereQuery<vec> query;
+    static_assert(not IsQuery<SphereQuery<DataWrapper<vec, float>>, float>);
+    [[maybe_unused]] SphereQuery<BasicOctree::TDataWrapper> query;
 }
 
 TEST(OctreeCppTest, OctreeConstructible) {
     static_assert(std::is_constructible_v<OctreeCpp<vec, float>, Boundary<vec>>);
-    [[maybe_unused]] OctreeCpp<vec, float> octree({});
+    [[maybe_unused]] BasicOctree octree({});
 }
 
 TEST(OctreeCppTest, OctreeAdd) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
 
-    DataWrapper<vec, float> data = {{0.5f, 0.5f, 0.5f}, 1.0f};
+    BasicOctree::TDataWrapper data = {{0.5f, 0.5f, 0.5f}, 1.0f};
     octree.Add(data);
     EXPECT_EQ(octree.Size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeAddOutsideX) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
 
-    DataWrapper<vec, float> data = {{1.5f, 0.5f, 0.5f}, 1.0f};
+    BasicOctree::TDataWrapper data = {{1.5f, 0.5f, 0.5f}, 1.0f};
     EXPECT_THROW(octree.Add(data), std::runtime_error);
     EXPECT_EQ(octree.Size(), 0);
 }
 
 TEST(OctreeCppTest, OctreeAddOutsideY) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
 
-    DataWrapper<vec, float> data = {{0.5f, 1.5f, 0.5f}, 1.0f};
+    BasicOctree::TDataWrapper data = {{0.5f, 1.5f, 0.5f}, 1.0f};
     EXPECT_THROW(octree.Add(data), std::runtime_error);
     EXPECT_EQ(octree.Size(), 0);
 }
 
 TEST(OctreeCppTest, OctreeAddOutsideZ) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
 
-    DataWrapper<vec, float> data = {{0.5f, 0.5f, 1.5f}, 1.0f};
+    BasicOctree::TDataWrapper data = {{0.5f, 0.5f, 1.5f}, 1.0f};
     EXPECT_THROW(octree.Add(data), std::runtime_error);
     EXPECT_EQ(octree.Size(), 0);
 }
 
 TEST(OctreeCppTest, OctreeAddMany) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(0.0f, 1.0f);
     for (int i = 0; i < 100; i++) {
-        DataWrapper<vec, float> data = {{dis(gen), dis(gen), dis(gen)}, 1.0f};
+        BasicOctree::TDataWrapper data = {{dis(gen), dis(gen), dis(gen)}, 1.0f};
         octree.Add(data);
     }
-    DataWrapper<vec, float> data = {{0.5f, 0.5f, 1.5f}, 1.0f};
+    BasicOctree::TDataWrapper data = {{0.5f, 0.5f, 1.5f}, 1.0f};
     EXPECT_THROW(octree.Add(data), std::runtime_error);
     EXPECT_EQ(octree.Size(), 100);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleEmpty) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    SphereQuery<vec> query = {{0.5f, 0.5f, 0.5f}, 0.5f};
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    SphereQuery<BasicOctree::TDataWrapper> query = {{0.5f, 0.5f, 0.5f}, 0.5f};
     auto result = octree.Query(query);
     EXPECT_EQ(result.size(), 0);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHit) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    octree.Add(DataWrapper<vec, float>{{0.5f, 0.5f, 0.5f}, 1.0f});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 1);
+    octree.Add(BasicOctree::TDataWrapper{{0.5f, 0.5f, 0.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHitNegative) {
-    OctreeCpp<vec, float> octree({{-100, -100, -100}, {100, 100, 100}});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    BasicOctree octree({{-100, -100, -100}, {100, 100, 100}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    octree.Add(DataWrapper<vec, float>{{-20.0f, -20.5f, -10.5f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{-5.0f, -20.5f, -10.5f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{-5.0f, -5.5f, -5.5f}, 1.0f});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{-20.0f, -70.0f, -10.5f}, 50.0f}).size(), 1);
+    octree.Add(BasicOctree::TDataWrapper{{-20.0f, -20.5f, -10.5f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{-5.0f, -20.5f, -10.5f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{-5.0f, -5.5f, -5.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{-20.0f, -70.0f, -10.5f}, 50.0f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleHitNegativeFullOctree) {
@@ -121,78 +123,78 @@ TEST(OctreeCppTest, OctreeQueryCircleHitNegativeFullOctree) {
         octree.Add(data);
     }
 
-    EXPECT_EQ(octree.Query(AllQuery<vec>{}).size(), 10000);
+    EXPECT_EQ(octree.Query(AllQuery<DataWrapper<vec, int>>{}).size(), 10000);
 
     octree.Add(DataWrapper<vec, int>{{-99.0f, -100.0f, -100.0f}, -1});
     octree.Add(DataWrapper<vec, int>{{-95.0f, -100.0f, -100.0f}, -2});
     octree.Add(DataWrapper<vec, int>{{-96.0f, -100.0f, -100.0f}, -3});
     octree.Add(DataWrapper<vec, int>{{-97.0f, -100.0f, -100.0f}, -4});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{-145.0f, -100.0f, -100.0f}, 50.0f}).size(), 4);
+    EXPECT_EQ(octree.Query(SphereQuery<DataWrapper<vec, int>>{{-145.0f, -100.0f, -100.0f}, 50.0f}).size(), 4);
 }
 
 TEST(OctreeCppTest, OctreeQueryCircleMiss) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 1.5f}).size(), 8);
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 1.5f}).size(), 8);
 }
 
 TEST(OctreeCppTest, OctreeQueryOutsideBoundary) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.0f, 0.0f, -0.1f}, 0.5f}).size(), 1);
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.0f, 0.0f, -0.1f}, 0.5f}).size(), 1);
 }
 
 TEST(OctreeCppTest, OctreeQueryRand) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.5f}).size(), 0);
 
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 0.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
-    octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.9f}).size(), 8);
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 1.0f}, 1.0f});
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.9f}).size(), 8);
 }
 
 TEST(OctreeCppTest, OctreeQueryMany) {
-    OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
     octree.Add(DataWrapper<vec, float>{{0.5f, 0.5f, 0.5f}, 1.0f});
 
     for (int i = 0; i < 1000; i++) {
-        octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 0.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 0.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 0.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{0.0f, 0.0f, 1.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 0.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{0.0f, 1.0f, 1.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{1.0f, 1.0f, 1.0f}, 1.0f});
-        octree.Add(DataWrapper<vec, float>{{1.0f, 0.0f, 1.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 0.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 0.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 0.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{0.0f, 0.0f, 1.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 1.0f}, 1.0f});
+        octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
     }
 
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.1f}).size(), 1);
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.1f}).size(), 1);
     EXPECT_EQ(octree.Size(), 8001);
-    EXPECT_EQ(octree.Query(SphereQuery<vec>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
 }

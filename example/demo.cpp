@@ -17,7 +17,8 @@ float DistanceBoxSphere(const Boundary<glm::vec3>& Box, const glm::vec3& SphereC
 }
 
 void app1() {
-    OctreeCpp<glm::vec3, int> octree({{-1000, -1000, -1000}, {1000, 1000, 1000}});
+    using Octree = OctreeCpp<glm::vec3, int>;
+    Octree octree({{-1000, -1000, -1000}, {1000, 1000, 1000}});
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<float> dis(0.0f, 1.0f);
@@ -26,7 +27,7 @@ void app1() {
         octree.Add(data);
     }
     {
-        auto pointsWrapper = octree.Query(AllQuery<glm::vec3>{});
+        auto pointsWrapper = octree.Query(AllQuery<Octree::TDataWrapper>{});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -38,7 +39,7 @@ void app1() {
     }
     {
         glm::vec3 midpoint = {10.0f, 10.0f, 10.0f};
-        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, 50.0f});
+        auto pointsWrapper = octree.Query(SphereQuery<Octree::TDataWrapper>{midpoint, 50.0f});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -59,7 +60,7 @@ void app1() {
     }
     {
         glm::vec3 midpoint = {-10.0f, -10.0f, -10.0f};
-        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, 50.0f});
+        auto pointsWrapper = octree.Query(SphereQuery<Octree::TDataWrapper>{midpoint, 50.0f});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -88,7 +89,8 @@ glm::vec3 midpoint = {10.0f, 10.0f, 10.0f};
 float radius = 50.0f;
 
 void mySubroutine() {
-    OctreeCpp<glm::vec3, int> octree({{-1000, -1000, -1000}, {1000, 1000, 1000}});
+    using Octree = OctreeCpp<glm::vec3, int>;
+    Octree octree({{-1000, -1000, -1000}, {1000, 1000, 1000}});
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<float> dis(0.0f, 100.0f);
@@ -97,7 +99,7 @@ void mySubroutine() {
         octree.Add(data);
     }
     {
-        auto pointsWrapper = octree.Query(AllQuery<glm::vec3>{});
+        auto pointsWrapper = octree.Query(AllQuery<Octree::TDataWrapper>{});
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
             points.push_back(pw.Vector);
@@ -107,7 +109,7 @@ void mySubroutine() {
         cloud->setPointRenderMode(polyscope::PointRenderMode::Sphere);
     }
     {
-        auto pointsWrapper = octree.Query(SphereQuery<glm::vec3>{midpoint, radius});
+        auto pointsWrapper = octree.Query(SphereQuery<Octree::TDataWrapper>{midpoint, radius});
 
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {

@@ -45,41 +45,56 @@ float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCente
     return 0.0f;
 }
 
-template <typename TQuery, typename TVector>
-concept IsQuery = requires(TQuery Query) {
-    { Query.IsInside(TVector()) } -> std::convertible_to<bool>;
-    { Query.Covers(Boundary<TVector>()) } -> std::convertible_to<bool>;
+template <VectorLike TVector, std::default_initializable TData>
+struct DataWrapper {
+    using VectorType = TVector;
+
+    TVector Vector;
+    TData Data;
 };
 
-template <VectorLike TVector>
+template <typename TQuery, typename TDataWrapper>
+concept IsQuery = requires(TQuery Query) {
+    { Query.IsInside(TDataWrapper()) } -> std::convertible_to<bool>;
+    { Query.Covers(Boundary<typename TDataWrapper::VectorType>()) } -> std::convertible_to<bool>;
+};
+
+template <typename TDataWrapper>
+struct AllQuery {
+    bool IsInside([[maybe_unused]] const TDataWrapper& Vector) const {
+        return true;
+    }
+    bool Covers([[maybe_unused]] const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+        return true;
+    }
+};
+
+template <typename TDataWrapper>
 struct SphereQuery {
-    const TVector Midpoint = {0, 0, 0};
+    const typename TDataWrapper::VectorType Midpoint = {0, 0, 0};
     const float Radius = 0.0f;
 
-    bool IsInside(const TVector& Point) const {
-        return Distance(Midpoint, Point) <= Radius;
+    bool IsInside(const TDataWrapper& Data) const {
+        return Distance(Midpoint, Data.Vector) <= Radius;
     }
 
-    bool Covers(const Boundary<TVector>& Boundary) const {
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
         return DistanceBoxSphere(Boundary, Midpoint, Radius) <= 0.0f;
     }
 };
 
-template <VectorLike TVector>
-struct AllQuery {
-    bool IsInside([[maybe_unused]] const TVector& Vector) const {
-        return true;
+/*
+template <VectorLike TVector, typename Pred>
+struct PredQuery {
+    bool IsInside(const TVector& Point) const {
+        return Pred();
     }
-    bool Covers([[maybe_unused]] const Boundary<TVector>& Boundary) const {
-        return true;
-    }
-};
 
-template <VectorLike TVector, std::default_initializable TData>
-struct DataWrapper {
-    TVector Vector;
-    TData Data;
+    bool Covers(const Boundary<TVector>&  Boundary) const {
+        return true;
+    }
 };
+ */
 
 template <VectorLike TVector, typename TData>
 class OctreeCpp {
@@ -97,10 +112,11 @@ private:
         BottomRightBack
     };
 public:
+    using TDataWrapper = DataWrapper<TVector, TData>;
     explicit OctreeCpp(Boundary<TVector> Boundary) : Boundary(Boundary) {
     }
 
-    void Add(const DataWrapper<TVector, TData>& DataWrapper) {
+    void Add(const TDataWrapper& DataWrapper) {
         if (!IsPointInBoundrary(DataWrapper.Vector, Boundary)) {
             throw std::runtime_error("Vector is outside of boundary");
         }
@@ -121,11 +137,11 @@ public:
         NrObjects++;
     }
 
-    template <IsQuery<TVector> TQueryObject>
-    [[nodiscard]] std::vector<DataWrapper<TVector, TData>> Query(const TQueryObject& QueryObject) const {
-        std::vector<DataWrapper<TVector, TData>> result;
+    template <IsQuery<TDataWrapper> TQueryObject>
+    [[nodiscard]] std::vector<TDataWrapper> Query(const TQueryObject& QueryObject) const {
+        std::vector<TDataWrapper> result;
         for (const auto& data : Data) {
-            if (QueryObject.IsInside(data.Vector)) {
+            if (QueryObject.IsInside(data)) {
                 result.push_back(data);
             }
         }
@@ -200,7 +216,7 @@ private:
                 GetBoundraryFromOctant(octant)));
     }
 
-    void AddToChild(Octant octant, const DataWrapper<TVector, TData>& DataWrapper) {
+    void AddToChild(Octant octant, const TDataWrapper& DataWrapper) {
         int index = static_cast<int>(octant);
         if (!Children.at(index)) {
             throw std::runtime_error("Child does not exist");
@@ -229,7 +245,7 @@ private:
     }
 
     std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, NrChildren> Children;
-    std::vector<DataWrapper<TVector, TData>> Data;
+    std::vector<TDataWrapper> Data;
     Boundary<TVector> Boundary;
     size_t NrObjects = 0;
 };
