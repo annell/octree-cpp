@@ -1,29 +1,49 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # octree-cpp
-A Octree implementation in C++.
+A Octree implementation in C++ built to work with your own vector class and any generic data blob stored along side its position in the world.
+The queries are very easily extendable via templates if there is some specific usecase that you want to query on.
+
+The usecase for this octree is to be able to, quickly do complex queries in 3D space.
 
 ## What is Octree?
 > An octree is a tree data structure in which each internal node has exactly eight children. Octrees are most often used to partition a three-dimensional space by recursively subdividing it into eight octants. Octrees are the three-dimensional analog of quadtrees. The word is derived from oct (Greek root meaning "eight") + tree. Octrees are often used in 3D graphics and 3D game engines.
 
 [- Wikipedia](https://en.wikipedia.org/wiki/Octree)
+
 ## How to use
+
+### Basic example
 ```C++
 // Create the octree with its boundry
 // First parameter is vector type, second parameter is payload
-OctreeCpp<vec, float> octree({{0, 0, 0}, {1, 1, 1}});
-auto hits = octree.Query(AllQuery<vec>());
+using Octree = OctreeCpp<vec, float>;
+Octree octree({{0, 0, 0}, {1, 1, 1}});
+auto hits = octree.Query(Octree::All());
 EXPECT_EQ(hits.size(), 0);
 
 // Add data to the octree
 octree.Add({.Vector{0.5f, 0.5f, 0.5f}, .Data{1.0f}});
-hits = octree.Query(AllQuery<vec>());
+hits = octree.Query(Octree::All());
 EXPECT_EQ(hits.size(), 1);
 
 // Query the octree using the SphereQuery
-hits = octree.Query(SphereQuery<vec>{{0.5f, 0.5f, 0.5f}, 0.5f});
+hits = octree.Query(Octree::Sphere{{0.5f, 0.5f, 0.5f}, 0.5f});
 EXPECT_EQ(hits.size(), 1)
 ```
+### Compund query
+You can use basic shapes and then also build up more complex queries by compound them with AND, OR, NOT and Predicate to do much more interesting queries while still only doing one pass.
+````c++
+// Basic Sphere query at 0, 0, 0 with 50 radius
+auto midQuery = Octree::Sphere{{0, 0, 0}, 50.0f};
+
+// A sphere query but Not'ed
+auto notQuery = Octree::Not<Octree::Sphere>{{25, 25, 25}, 10};
+
+// Two queries, one Not'ed, combined with AND 
+auto result = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Sphere>>{midQuery, notQuery});
+````
+
 # To install
 ## Header only method
 1. Copy `OctreeCpp.h` to your project and include header.
