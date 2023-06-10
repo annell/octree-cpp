@@ -5,6 +5,7 @@
 #include "polyscope/polyscope.h"
 #include "../src/OctreeCpp.h"
 #include "polyscope/point_cloud.h"
+#include <chrono>
 
 template<>
 float DistanceBoxSphere(const Boundary<glm::vec3>& Box, const glm::vec3& SphereCenter, float SphereRadius) {
@@ -87,8 +88,14 @@ void app1() {
 int nPts = 2000;
 glm::vec3 midpoint = {10.0f, 10.0f, 10.0f};
 float radius = 50.0f;
+bool notFlag = false;
+bool andFlag = true;
+int queryTime = 0;
 
 void mySubroutine() {
+    using namespace std::chrono;
+
+    
     using Octree = OctreeCpp<glm::vec3, int>;
     Octree octree({{-1000, -1000, -1000}, {1000, 1000, 1000}});
     std::random_device rd;
@@ -109,7 +116,26 @@ void mySubroutine() {
         cloud->setPointRenderMode(polyscope::PointRenderMode::Sphere);
     }
     {
-        auto pointsWrapper = octree.Query(SphereQuery<Octree::TDataWrapper>{midpoint, radius});
+        auto start = high_resolution_clock::now();
+        std::vector<Octree::TDataWrapper> pointsWrapper;
+        auto midQuery = Octree::Sphere{{0, 0, 0}, 50.0f};
+        auto notQuery = Octree::Not<Octree::Sphere>{midpoint, radius};
+        auto query = Octree::Sphere{midpoint, radius};
+        if (andFlag) {
+            if (notFlag) {
+                pointsWrapper = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Sphere>>{midQuery, notQuery});
+            } else {
+                pointsWrapper = octree.Query(Octree::And<Octree::Sphere, Octree::Sphere>{query, midQuery});
+            }
+        } else {
+            if (notFlag) {
+                pointsWrapper = octree.Query(Octree::Or<Octree::Sphere, Octree::Not<Octree::Sphere>>{midQuery, notQuery});
+            } else {
+                pointsWrapper = octree.Query(Octree::Or<Octree::Sphere, Octree::Sphere>{query, midQuery});
+            }
+        }
+        auto stop = high_resolution_clock::now();
+        queryTime = duration_cast<microseconds>(stop - start).count();
 
         std::vector<glm::vec3> points;
         for (auto pw : pointsWrapper) {
@@ -120,6 +146,7 @@ void mySubroutine() {
         cloud->setPointRadius(0.006);
         cloud->setPointColor({1.0, 0.0, 0.0});
 
+        return;
         std::vector<glm::vec3> points2;
         points2.push_back(midpoint);
         polyscope::registerPointCloud("q1_mid", points2);
@@ -141,7 +168,11 @@ void myCallback() {
 
     ImGui::SliderInt("num points", &nPts, 0, 10000);             // set a int variable
     ImGui::SliderFloat3("midpoint", glm::value_ptr(midpoint), -100, 100);  // set a float variable
-    ImGui::SliderFloat("radius", &radius, 0, 100);  // set a float variable
+    ImGui::SliderFloat("radius", &radius, 0, 1000);  // set a float variable
+    ImGui::Checkbox("Not", &notFlag);
+    ImGui::Checkbox("And/Or", &andFlag);
+    auto time = "Query time: " + std::to_string(queryTime) + " microseconds";
+    ImGui::Text(time.c_str());
 
     if (ImGui::Button("Run query")) {
         // executes when button is pressed

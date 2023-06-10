@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <functional>
 
 template <typename TVector>
 concept VectorLike = requires(TVector Vector) {
@@ -14,6 +15,18 @@ template <VectorLike TVector>
 struct Boundary {
     const TVector Min = {0, 0, 0};
     const TVector Max = {0, 0, 0};
+};
+
+template <typename TQuery, typename TDataWrapper>
+concept IsQuery = requires(TQuery Query) {
+    { Query.IsInside(TDataWrapper()) } -> std::convertible_to<bool>;
+    { Query.Covers(Boundary<typename TDataWrapper::VectorType>()) } -> std::convertible_to<bool>;
+};
+
+template <typename TDataWrapper>
+concept IsDataWrapper = requires(TDataWrapper DataWrapper) {
+    { DataWrapper.Vector } -> std::convertible_to<typename TDataWrapper::VectorType>;
+    { DataWrapper.Data } -> std::convertible_to<typename TDataWrapper::DataT>;
 };
 
 template<typename TVector>
@@ -48,18 +61,13 @@ float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCente
 template <VectorLike TVector, std::default_initializable TData>
 struct DataWrapper {
     using VectorType = TVector;
+    using DataT = TData;
 
-    TVector Vector;
-    TData Data;
+    VectorType Vector;
+    DataT Data;
 };
 
-template <typename TQuery, typename TDataWrapper>
-concept IsQuery = requires(TQuery Query) {
-    { Query.IsInside(TDataWrapper()) } -> std::convertible_to<bool>;
-    { Query.Covers(Boundary<typename TDataWrapper::VectorType>()) } -> std::convertible_to<bool>;
-};
-
-template <typename TDataWrapper>
+template <IsDataWrapper TDataWrapper>
 struct AllQuery {
     bool IsInside([[maybe_unused]] const TDataWrapper& Vector) const {
         return true;
@@ -69,7 +77,7 @@ struct AllQuery {
     }
 };
 
-template <typename TDataWrapper>
+template <IsDataWrapper TDataWrapper>
 struct SphereQuery {
     const typename TDataWrapper::VectorType Midpoint = {0, 0, 0};
     const float Radius = 0.0f;
@@ -83,18 +91,59 @@ struct SphereQuery {
     }
 };
 
-/*
-template <VectorLike TVector, typename Pred>
+template <IsDataWrapper TDataWrapper>
 struct PredQuery {
-    bool IsInside(const TVector& Point) const {
-        return Pred();
+    std::function<bool(const TDataWrapper&)> Pred;
+
+    bool IsInside(const TDataWrapper& Data) const {
+        return Pred(Data);
     }
 
-    bool Covers(const Boundary<TVector>&  Boundary) const {
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
         return true;
     }
 };
- */
+
+template <IsDataWrapper TDataWrapper, IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
+struct AndQuery {
+    QueryLHS Query1;
+    QueryRHS Query2;
+
+    bool IsInside(const TDataWrapper& Data) const {
+        return Query1.IsInside(Data) && Query2.IsInside(Data);
+    }
+
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+        return Query1.Covers(Boundary) && Query2.Covers(Boundary);
+    }
+};
+
+template <IsDataWrapper TDataWrapper, IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
+struct OrQuery {
+    QueryLHS Query1;
+    QueryRHS Query2;
+
+    bool IsInside(const TDataWrapper& Data) const {
+        return Query1.IsInside(Data) || Query2.IsInside(Data);
+    }
+
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+        return Query1.Covers(Boundary) || Query2.Covers(Boundary);
+    }
+};
+
+template <IsDataWrapper TDataWrapper, IsQuery<TDataWrapper> TQuery>
+struct NotQuery {
+    TQuery Query;
+
+    bool IsInside(const TDataWrapper& Data) const {
+        return !Query.IsInside(Data);
+    }
+
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+        return true;
+    }
+};
 
 template <VectorLike TVector, typename TData>
 class OctreeCpp {
@@ -113,6 +162,19 @@ private:
     };
 public:
     using TDataWrapper = DataWrapper<TVector, TData>;
+
+    template <IsQuery<TDataWrapper> Query>
+    using Not = NotQuery<TDataWrapper, Query>;
+    using Sphere = SphereQuery<TDataWrapper>;
+    using Pred = PredQuery<TDataWrapper>;
+    using All = AllQuery<TDataWrapper>;
+
+    template <IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
+    using And = AndQuery<TDataWrapper, QueryLHS, QueryRHS>;
+
+    template <IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
+    using Or = OrQuery<TDataWrapper, QueryLHS, QueryRHS>;
+
     explicit OctreeCpp(Boundary<TVector> Boundary) : Boundary(Boundary) {
     }
 

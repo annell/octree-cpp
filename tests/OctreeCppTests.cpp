@@ -198,3 +198,69 @@ TEST(OctreeCppTest, OctreeQueryMany) {
     EXPECT_EQ(octree.Size(), 8001);
     EXPECT_EQ(octree.Query(SphereQuery<BasicOctree::TDataWrapper>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
 }
+
+TEST(OctreeCppTest, OctreePredQuery) {
+    using IntOctree = OctreeCpp<vec, int>;
+    IntOctree octree({{0, 0, 0}, {1, 1, 1}});
+    octree.Add(IntOctree::TDataWrapper{{0.5f, 0.5f, 0.5f}, -1});
+
+    for (int i = 0; i < 1000; i++) {
+        octree.Add(IntOctree::TDataWrapper{{0.0f, 0.0f, 0.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{1.0f, 0.0f, 0.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{0.0f, 1.0f, 0.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{0.0f, 0.0f, 1.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{1.0f, 1.0f, 1.0f}, i});
+        octree.Add(IntOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, i});
+    }
+
+    EXPECT_EQ(octree.Query(SphereQuery<IntOctree::TDataWrapper>{{0.5f, 0.5f, 0.5f}, 0.1f}).size(), 1);
+    EXPECT_EQ(octree.Size(), 8001);
+    EXPECT_EQ(octree.Query(SphereQuery<IntOctree::TDataWrapper>{{0.0f, 0.0f, 0.0f}, 0.1f}).size(), 1000);
+    EXPECT_EQ(octree.Query(PredQuery<IntOctree::TDataWrapper>{[](const auto& Data){return Data.Data < 0;}}).size(), 1);
+    EXPECT_EQ(octree.Query(PredQuery<IntOctree::TDataWrapper>{[](const auto& Data){return Data.Data >= 0;}}).size(), 8000);
+    EXPECT_EQ(octree.Query(PredQuery<IntOctree::TDataWrapper>{[](const auto& Data){return Data.Data == 0;}}).size(), 8);
+}
+
+TEST(OctreeCppTest, OctreeAndQuery) {
+    using Oct = OctreeCpp<vec, int>;
+    Oct octree({{0, 0, 0}, {1, 1, 1}});
+    octree.Add({{0.5f, 0.5f, 0.5f}, -1});
+
+    for (int i = 0; i < 1000; i++) {
+        octree.Add({{0.0f, 0.0f, 0.0f}, i});
+        octree.Add({{1.0f, 0.0f, 0.0f}, i});
+        octree.Add({{0.0f, 1.0f, 0.0f}, i});
+        octree.Add({{0.0f, 0.0f, 1.0f}, i});
+        octree.Add({{1.0f, 1.0f, 0.0f}, i});
+        octree.Add({{0.0f, 1.0f, 1.0f}, i});
+        octree.Add({{1.0f, 1.0f, 1.0f}, i});
+        octree.Add({{1.0f, 0.0f, 1.0f}, i});
+    }
+
+    auto Pred1 = Oct::Pred{[](const auto& Data){return Data.Data > 0;}};
+    auto Pred2 = Oct::Pred{[](const auto& Data){return Data.Data < 2;}};
+    auto Sphere = Oct::Sphere{{0.5f, 0.5f, 0.5f}, 0.1f};
+    auto AQuery = Oct::And < Oct::Pred, Oct::Pred>{Pred1, Pred2};
+    auto BQuery = Oct::And < Oct::Sphere, Oct::Pred>{Sphere, Pred2};
+    auto CQuery = Oct::And < Oct::Not < Oct::Sphere >, Oct::Pred>{Sphere, Pred2};
+    auto DQuery = Oct::Or < Oct::Sphere, Oct::Not<Oct::Sphere>>{Sphere, Sphere};
+    EXPECT_EQ(octree.Query(AQuery).size(), 8);
+    EXPECT_EQ(octree.Query(BQuery).size(), 1);
+    EXPECT_EQ(octree.Query(CQuery).size(), 16);
+    EXPECT_EQ(octree.Query(DQuery).size(), 8001);
+}
+
+TEST(OctreeCppTest, OctreeNotQuery) {
+    using Oct = OctreeCpp<vec, int>;
+    Oct octree({{0, 0, 0}, {1, 1, 1}});
+    octree.Add({{0.5f, 0.5f, 0.5f}, 0});
+    for (int i = 0; i < 20; i++) {
+        octree.Add({{0.0f, 0.0f, 0.0f}, 1});
+    }
+
+    auto Sphere = Oct::Sphere{{0.5f, 0.5f, 0.5f}, 0.1f};
+    auto result = octree.Query(Oct::Not<Oct::Sphere>{Sphere});
+    EXPECT_EQ(result.size(), 20);
+}

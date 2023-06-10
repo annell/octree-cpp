@@ -50,6 +50,8 @@ EXPECT_EQ(hits.size(), 1)
 And see the following results:
 ![sphere-query-example.png](example%2Fsphere-query-example.png)
 
+![sphere-query-example.png](example%2Fquery-sphere-or-not-example.png)
+
 ### Dependencies
 - C++20
 - GTest
