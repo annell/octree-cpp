@@ -99,7 +99,7 @@ struct PredQuery {
         return Pred(Data);
     }
 
-    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+    bool Covers([[maybe_unused]] const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
         return true;
     }
 };
@@ -140,10 +140,19 @@ struct NotQuery {
         return !Query.IsInside(Data);
     }
 
-    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+    bool Covers([[maybe_unused]] const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
         return true;
     }
 };
+
+/**
+ * A octree implementation with Bring your own vector class depending on what you use
+ * in your project. Capabale of storing whatever type of data positioned in 3d space
+ * and support complex queries to find whatever data you are looking for quickly.
+ *
+ * @tparam TVector "Bring your own", Vector class that you want to use. Needs to fufil VectorLike concept.
+ * @tparam TData Data blob that should be paired up with the added object.
+ */
 
 template <VectorLike TVector, typename TData>
 class OctreeCpp {
@@ -163,21 +172,49 @@ private:
 public:
     using TDataWrapper = DataWrapper<TVector, TData>;
 
+    /**
+     * Not query, inverts whatever query it has as input.
+     */
     template <IsQuery<TDataWrapper> Query>
     using Not = NotQuery<TDataWrapper, Query>;
+
+    /**
+     * Sphere query, for finding objects within given sphere.
+     */
     using Sphere = SphereQuery<TDataWrapper>;
+
+    /**
+     * Predicate query to find based on something specific in
+     * either position or the data.
+     */
     using Pred = PredQuery<TDataWrapper>;
+
+    /**
+     * Returns all points.
+     */
     using All = AllQuery<TDataWrapper>;
 
+    /**
+     * Composite queries AND / OR that binds together several queries to
+     * get more interesting results.
+     */
     template <IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
     using And = AndQuery<TDataWrapper, QueryLHS, QueryRHS>;
-
     template <IsQuery<TDataWrapper> QueryLHS, IsQuery<TDataWrapper> QueryRHS>
     using Or = OrQuery<TDataWrapper, QueryLHS, QueryRHS>;
 
+    /**
+     * Constructor to setup the Octree.
+     *
+     * @param Boundary min and max X, Y, Z values of the octree.
+     */
     explicit OctreeCpp(Boundary<TVector> Boundary) : Boundary(Boundary) {
     }
 
+    /**
+     * Stores the given data in the octree container.
+     * @param DataWrapper
+     */
     void Add(const TDataWrapper& DataWrapper) {
         if (!IsPointInBoundrary(DataWrapper.Vector, Boundary)) {
             throw std::runtime_error("Vector is outside of boundary");
@@ -199,6 +236,14 @@ public:
         NrObjects++;
     }
 
+    /**
+     * Queries the octree and returns all results that returns a hit.
+     * Predefined queries can be user or you can define your own that fufil the concept IsQuery.
+     *
+     * @tparam TQueryObject The query type passed in.
+     * @param QueryObject The object of TQueryObject with the query
+     * @return A list of results.
+     */
     template <IsQuery<TDataWrapper> TQueryObject>
     [[nodiscard]] std::vector<TDataWrapper> Query(const TQueryObject& QueryObject) const {
         std::vector<TDataWrapper> result;
@@ -216,6 +261,9 @@ public:
         return result;
     }
 
+    /**
+     * @return Number of object in container.
+     */
     [[nodiscard]] size_t Size() const {
         return NrObjects;
     }

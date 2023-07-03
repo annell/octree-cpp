@@ -12,8 +12,28 @@ The usecase for this octree is to be able to, quickly do complex queries in 3D s
 [- Wikipedia](https://en.wikipedia.org/wiki/Octree)
 
 ## How to use
+The octree is very light weight to use, the basic usecase is:
+1. Setup the octree with your vector class and the payload that you want to use.
+```c++
+using Octree = OctreeCpp<vec, float>;
+Octree octree({{0, 0, 0}, {1, 1, 1}});
+```
+Here the vector class is called vec and the payload is a float, and it can be whetever you want.
+The min / max values for this octree is set to be [0, 0, 0] -> [1, 1, 1]
+2. Add data to the octree.
+```c++
+octree.Add({.Vector{0.5f, 0.5f, 0.5f}, .Data{1.0f}});
+```
+The payload is copied to the octree by default.
+3. Query the octree for _hits_.
+```c++
+auto hits = octree.Query(Octree::Sphere{{0.5f, 0.5f, 0.5f}, 0.5f});
+```
+Query returns a list of all objects that was within the given query.
 
-### Basic example
+### Basic query
+A simple usage using a query to find all data points within the given area.
+
 ```C++
 // Create the octree with its boundry
 // First parameter is vector type, second parameter is payload
@@ -52,8 +72,15 @@ auto result = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Spher
 1. Clone repo with `git clone --recurse-submodules`
 2. Include `octree-cpp` folder in the CMakeList file with: `add_subdirectory("path/to/octree-cpp")`
 
-# Dependencies
+## Dependencies
 - C++20
+- GTest
+
+### To install all dependencies using Conan [optional]
+This library uses the PackageManager [Conan](https://conan.io) for its dependencies, and all dependencies can be found in `conantfile.txt`.
+1. Install conan `pip3 install conan`
+2. Go to the build folder that cmake generates.
+3. Run `conan install ..` see [installing dependencies](https://docs.conan.io/en/1.7/using_packages/conanfile_txt.html)
 
 # To run test suite
 1. Clone repo to your project.
@@ -67,17 +94,9 @@ auto result = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Spher
 3. Include the CMakeList in your cmake structure.
 4. Build & run octree-cpp_demo.
 
-And see the following results:
+### Basic sphere query.
 ![sphere-query-example.png](example%2Fsphere-query-example.png)
 
+### A compound query with more complex geometry.
 ![sphere-query-example.png](example%2Fquery-sphere-or-not-example.png)
 
-### Dependencies
-- C++20
-- GTest
-
-### To install all dependencies using Conan [optional]
-This library uses the PackageManager [Conan](https://conan.io) for its dependencies, and all dependencies can be found in `conantfile.txt`.
-1. Install conan `pip3 install conan`
-2. Go to the build folder that cmake generates.
-3. Run `conan install ..` see [installing dependencies](https://docs.conan.io/en/1.7/using_packages/conanfile_txt.html)
