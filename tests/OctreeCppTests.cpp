@@ -264,3 +264,29 @@ TEST(OctreeCppTest, OctreeNotQuery) {
     auto result = octree.Query(Oct::Not<Oct::Sphere>{Sphere});
     EXPECT_EQ(result.size(), 20);
 }
+
+TEST(OctreeCppTest, OctreeQueryCylinderHit) {
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    auto query = BasicOctree::Cylinder{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, 0.5f};
+    EXPECT_EQ(octree.Query(query).size(), 0);
+
+    octree.Add(BasicOctree::TDataWrapper{{0.5f, 0.5f, 0.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(query).size(), 1);
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(query).size(), 1);
+}
+
+TEST(OctreeCppTest, OctreeQueryCylinderMiss) {
+    BasicOctree octree({{0, 0, 0}, {1, 1, 1}});
+    auto query = BasicOctree::Cylinder{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, 0.5f};
+    EXPECT_EQ(octree.Query(query).size(), 0);
+
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 1.0f, 0.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(query).size(), 0);
+
+    octree.Add(BasicOctree::TDataWrapper{{0.0f, 1.0f, 1.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(query).size(), 0);
+
+    octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
+    EXPECT_EQ(octree.Query(query).size(), 0);
+}

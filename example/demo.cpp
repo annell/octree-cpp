@@ -120,18 +120,18 @@ void mySubroutine() {
         std::vector<Octree::TDataWrapper> pointsWrapper;
         auto midQuery = Octree::Sphere{{0, 0, 0}, 50.0f};
         auto notQuery = Octree::Not<Octree::Sphere>{midpoint, radius};
-        auto query = Octree::Sphere{midpoint, radius};
+        auto query = Octree::Cylinder{midpoint, {-50, -50, -50}, radius};
         if (andFlag) {
             if (notFlag) {
                 pointsWrapper = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Sphere>>{midQuery, notQuery});
             } else {
-                pointsWrapper = octree.Query(Octree::And<Octree::Sphere, Octree::Sphere>{query, midQuery});
+                pointsWrapper = octree.Query(Octree::And<Octree::Cylinder, Octree::Sphere>{query, midQuery});
             }
         } else {
             if (notFlag) {
                 pointsWrapper = octree.Query(Octree::Or<Octree::Sphere, Octree::Not<Octree::Sphere>>{midQuery, notQuery});
             } else {
-                pointsWrapper = octree.Query(Octree::Or<Octree::Sphere, Octree::Sphere>{query, midQuery});
+                pointsWrapper = octree.Query(Octree::Or<Octree::Cylinder, Octree::Sphere>{query, midQuery});
             }
         }
         auto stop = high_resolution_clock::now();

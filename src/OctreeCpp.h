@@ -15,6 +15,19 @@ template <VectorLike TVector>
 struct Boundary {
     const TVector Min = {0, 0, 0};
     const TVector Max = {0, 0, 0};
+
+    std::array<TVector, 8> Corners() const {
+        std::array<TVector, 8> corners;
+        corners[0] = {Min.x, Min.y, Min.z};
+        corners[1] = {Min.x, Min.y, Max.z};
+        corners[2] = {Min.x, Max.y, Min.z};
+        corners[3] = {Min.x, Max.y, Max.z};
+        corners[4] = {Max.x, Min.y, Min.z};
+        corners[5] = {Max.x, Min.y, Max.z};
+        corners[6] = {Max.x, Max.y, Min.z};
+        corners[7] = {Max.x, Max.y, Max.z};
+    return corners;
+}
 };
 
 template <typename TQuery, typename TDataWrapper>
@@ -29,14 +42,14 @@ concept IsDataWrapper = requires(TDataWrapper DataWrapper) {
     { DataWrapper.Data } -> std::convertible_to<typename TDataWrapper::DataT>;
 };
 
-template<typename TVector>
+template<VectorLike TVector>
 bool IsPointInBoundrary(const TVector& Point, const Boundary<TVector>& Bound) {
     return Point.x >= Bound.Min.x && Point.x <= Bound.Max.x &&
            Point.y >= Bound.Min.y && Point.y <= Bound.Max.y &&
            Point.z >= Bound.Min.z && Point.z <= Bound.Max.z;
 }
 
-template<typename TVector>
+template<VectorLike TVector>
 float Distance(const TVector& Point1, const TVector& Point2) {
     float diffX = Point1.x - Point2.x;
     float diffY = Point1.y - Point2.y;
@@ -44,12 +57,53 @@ float Distance(const TVector& Point1, const TVector& Point2) {
     return std::sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ);
 }
 
-template<typename TVector>
+template <VectorLike TVector>
+float Dot(const TVector& v1, const TVector& v2) {
+    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+template <VectorLike TVector>
+float DistancePointToLine(const TVector& Point, const TVector& LinePoint1, const TVector& LinePoint2) {
+    TVector v = LinePoint2;
+    v.x -= LinePoint1.x;
+    v.y -= LinePoint1.y;
+    v.z -= LinePoint1.z;
+    TVector w = Point;
+    w.x -= LinePoint1.x;
+    w.y -= LinePoint1.y;
+    w.z -= LinePoint1.z;
+    float c1 = Dot(w, v);
+    float c2 = Dot(v, v);
+    float b = c1 / c2;
+    TVector Pb = TVector{LinePoint1};
+    Pb.x += v.x * b;
+    Pb.y += v.y * b;
+    Pb.z += v.z * b;
+
+    return Distance(Point, Pb);
+}
+
+template <VectorLike TVector>
+bool IsBoxInsideCylinder(const Boundary<TVector>& Boundary, const TVector& CylinderPoint1, const TVector& CylinderPoint2, float CylinderRadius) {
+    for (const auto& corner : Boundary.Corners()) {
+        if (DistancePointToLine(corner, CylinderPoint1, CylinderPoint2) <= CylinderRadius) {
+            return true;
+        }
+    }
+
+    if (IsPointInBoundrary(CylinderPoint1, Boundary) || IsPointInBoundrary(CylinderPoint2, Boundary)) {
+        return true;
+    }
+
+    return false;
+}
+
+template<VectorLike TVector>
 TVector Clamp(const TVector& Value, const TVector& Min, const TVector& Max) {
     return std::min(std::max(Value, Min), Max);
 }
 
-template<typename TVector>
+template<VectorLike TVector>
 float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCenter, float SphereRadius) {
     const TVector closestPoint = Clamp(SphereCenter, Box.Min, Box.Max);
     if (Distance(closestPoint, SphereCenter) > SphereRadius) {
@@ -88,6 +142,21 @@ struct SphereQuery {
 
     bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
         return DistanceBoxSphere(Boundary, Midpoint, Radius) <= 0.0f;
+    }
+};
+
+template <IsDataWrapper TDataWrapper>
+struct CylinderQuery {
+    const typename TDataWrapper::VectorType Point1 = {0, 0, 0};
+    const typename TDataWrapper::VectorType Point2 = {0, 0, 0};
+    const float Radius = 0.0f;
+
+    bool IsInside(const TDataWrapper& Data) const {
+        return DistancePointToLine(Data.Vector, Point1, Point2) <= Radius;
+    }
+
+    bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
+        return IsBoxInsideCylinder(Boundary, Point1, Point2, Radius);
     }
 };
 
@@ -182,6 +251,11 @@ public:
      * Sphere query, for finding objects within given sphere.
      */
     using Sphere = SphereQuery<TDataWrapper>;
+
+    /**
+     * Cylinder query, for finding objects within given cylinder.
+     */
+    using Cylinder = CylinderQuery<TDataWrapper>;
 
     /**
      * Predicate query to find based on something specific in
