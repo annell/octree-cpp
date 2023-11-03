@@ -2,7 +2,7 @@
 // Created by Stefan Annell on 2023-05-20.
 //
 
-#include "src/OctreeCpp.h"
+#include <OctreeCpp.h>
 #include <gtest/gtest.h>
 #include <random>
 
