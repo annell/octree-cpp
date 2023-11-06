@@ -65,12 +65,18 @@ auto result = octree.Query(Octree::And<Octree::Sphere, Octree::Not<Octree::Spher
 ````
 
 # To install
-## Header only method
-1. Copy `OctreeCpp.h` to your project and include header.
+## CMake method
+1. Clone octree-cpp to your project `git clone --recurse-submodules`.
+2. Add `add_subdirectory(path/octree-cpp)` to your CMakeLists.txt.
+3. Link your project to `octree-cpp`.
+4. Include `#include <octree-cpp/OctreeCpp.h>` in your project.
 
-## Subrepo method
-1. Clone repo with `git clone --recurse-submodules`
-2. Include `octree-cpp` folder in the CMakeList file with: `add_subdirectory("path/to/octree-cpp")`
+### Dependencies
+- C++20
+
+### Example on integration
+Here you can find a example on how to integrate this library into your project using CMake: [ecs-cpp-example](https://github.com/annell/physim-cpp).
+In this example, the library is placed under thirdparty/octree-cpp.
 
 ## Dependencies
 - C++20
