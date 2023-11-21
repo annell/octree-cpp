@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 #include <functional>
+#include <list>
 
 template <typename TVector>
 concept VectorLike = requires(TVector Vector) {
@@ -319,8 +320,8 @@ public:
      * @return A list of results.
      */
     template <IsQuery<TDataWrapper> TQueryObject>
-    [[nodiscard]] std::vector<TDataWrapper> Query(const TQueryObject& QueryObject) const {
-        std::vector<TDataWrapper> result;
+    [[nodiscard]] std::list<TDataWrapper> Query(const TQueryObject& QueryObject) const {
+        std::list<TDataWrapper> result;
         for (const auto& data : Data) {
             if (QueryObject.IsInside(data)) {
                 result.push_back(data);
@@ -329,7 +330,7 @@ public:
         for (const auto& child : Children) {
             if (child && QueryObject.Covers(child->Boundary)) {
                 auto childResult = child->Query(QueryObject);
-                result.insert(result.end(), childResult.begin(), childResult.end());
+                result.splice(result.end(), childResult);
             }
         }
         return result;
@@ -429,7 +430,7 @@ private:
     }
 
     std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, NrChildren> Children;
-    std::vector<TDataWrapper> Data;
+    std::list<TDataWrapper> Data;
     Boundary<TVector> Boundary;
     size_t NrObjects = 0;
 };
