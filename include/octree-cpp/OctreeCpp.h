@@ -51,11 +51,11 @@ bool IsPointInBoundrary(const TVector& Point, const Boundary<TVector>& Bound) {
 }
 
 template<VectorLike TVector>
-float Distance(const TVector& Point1, const TVector& Point2) {
+inline float DistanceSquared(const TVector& Point1, const TVector& Point2) {
     float diffX = Point1.x - Point2.x;
     float diffY = Point1.y - Point2.y;
     float diffZ = Point1.z - Point2.z;
-    return std::sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ);
+    return diffX * diffX + diffY * diffY + diffZ * diffZ;
 }
 
 template <VectorLike TVector>
@@ -81,13 +81,13 @@ float DistancePointToLine(const TVector& Point, const TVector& LinePoint1, const
     Pb.y += v.y * b;
     Pb.z += v.z * b;
 
-    return Distance(Point, Pb);
+    return DistanceSquared(Point, Pb);
 }
 
 template <VectorLike TVector>
 bool IsBoxInsideCylinder(const Boundary<TVector>& Boundary, const TVector& CylinderPoint1, const TVector& CylinderPoint2, float CylinderRadius) {
     for (const auto& corner : Boundary.Corners()) {
-        if (DistancePointToLine(corner, CylinderPoint1, CylinderPoint2) <= CylinderRadius) {
+        if (DistancePointToLine(corner, CylinderPoint1, CylinderPoint2) <= CylinderRadius * CylinderRadius) {
             return true;
         }
     }
@@ -100,17 +100,27 @@ bool IsBoxInsideCylinder(const Boundary<TVector>& Boundary, const TVector& Cylin
 }
 
 template<VectorLike TVector>
-TVector Clamp(const TVector& Value, const TVector& Min, const TVector& Max) {
+inline TVector Clamp(const TVector& Value, const TVector& Min, const TVector& Max) {
     return std::min(std::max(Value, Min), Max);
 }
 
+inline bool checkOverlap(float R, float Xc, float Yc, float Zc,
+                  float X1, float Y1, float Z1,
+                  float X2, float Y2, float Z2)
+{
+    int Xn = std::max(X1, std::min(Xc, X2));
+    int Yn = std::max(Y1, std::min(Yc, Y2));
+    int Zn = std::max(Z1, std::min(Zc, Z2));
+
+    int Dx = Xn - Xc;
+    int Dy = Yn - Yc;
+    int Zy = Zn - Zc;
+    return (Dx * Dx + Dy * Dy + Zy * Zy) <= R * R;
+}
+
 template<VectorLike TVector>
-float DistanceBoxSphere(const Boundary<TVector>& Box, const TVector& SphereCenter, float SphereRadius) {
-    const TVector closestPoint = Clamp(SphereCenter, Box.Min, Box.Max);
-    if (Distance(closestPoint, SphereCenter) > SphereRadius) {
-        return Distance(closestPoint, SphereCenter) - SphereRadius;
-    }
-    return 0.0f;
+inline bool CheckOverlapp(const Boundary<TVector>& Boundary, const TVector& Point1, float Radius) {
+    return checkOverlap(Radius, Point1.x, Point1.y, Point1.z, Boundary.Min.x, Boundary.Min.y, Boundary.Min.z, Boundary.Max.x, Boundary.Max.y, Boundary.Max.z);
 }
 
 template <VectorLike TVector, std::default_initializable TData>
@@ -138,11 +148,11 @@ struct SphereQuery {
     const float Radius = 0.0f;
 
     bool IsInside(const TDataWrapper& Data) const {
-        return Distance(Midpoint, Data.Vector) <= Radius;
+        return DistanceSquared(Midpoint, Data.Vector) <= Radius * Radius;
     }
 
     bool Covers(const Boundary<typename TDataWrapper::VectorType>& Boundary) const {
-        return DistanceBoxSphere(Boundary, Midpoint, Radius) <= 0.0f;
+        return CheckOverlapp(Boundary, Midpoint, Radius);
     }
 };
 
@@ -320,19 +330,10 @@ public:
      * @return A list of results.
      */
     template <IsQuery<TDataWrapper> TQueryObject>
-    [[nodiscard]] std::list<TDataWrapper> Query(const TQueryObject& QueryObject) const {
-        std::list<TDataWrapper> result;
-        for (const auto& data : Data) {
-            if (QueryObject.IsInside(data)) {
-                result.push_back(data);
-            }
-        }
-        for (const auto& child : Children) {
-            if (child && QueryObject.Covers(child->Boundary)) {
-                auto childResult = child->Query(QueryObject);
-                result.splice(result.end(), childResult);
-            }
-        }
+    [[nodiscard]] std::vector<TDataWrapper> Query(const TQueryObject& QueryObject) const {
+        std::vector<TDataWrapper> result;
+        result.reserve(5);
+        QueryInternal(QueryObject, result);
         return result;
     }
 
@@ -344,6 +345,22 @@ public:
     }
 
 private:
+    template <IsQuery<TDataWrapper> TQueryObject>
+    void QueryInternal(const TQueryObject& QueryObject, std::vector<TDataWrapper>& result) const {
+        for (const auto& data : Data) {
+            if (QueryObject.IsInside(data)) {
+                result.push_back(data);
+            }
+        }
+        if (Data.size() < MaxData) {
+            return;
+        }
+        for (const auto& child : Children) {
+            if (child && QueryObject.Covers(child->Boundary)) {
+                child->QueryInternal(QueryObject, result);
+            }
+        }
+    }
     TVector GetMidpoint() const {
         return {
             (Boundary.Min.x + Boundary.Max.x) / 2,
