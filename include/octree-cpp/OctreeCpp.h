@@ -332,7 +332,6 @@ public:
     template <IsQuery<TDataWrapper> TQueryObject>
     [[nodiscard]] std::vector<TDataWrapper> Query(const TQueryObject& QueryObject) const {
         std::vector<TDataWrapper> result;
-        result.reserve(5);
         QueryInternal(QueryObject, result);
         return result;
     }
