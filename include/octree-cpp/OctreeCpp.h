@@ -1,7 +1,6 @@
 #pragma once
 
 #include "OctreeUtil.h"
-#include <list>
 
 /**
  * A octree implementation with Bring your own vector class depending on what you use
@@ -71,6 +70,7 @@ public:
      * @param Boundary min and max X, Y, Z values of the octree.
      */
     explicit OctreeCpp(Boundary<TVector> Boundary) : Boundary(Boundary) {
+        Data.reserve(MaxData);
     }
 
     /**
@@ -223,7 +223,7 @@ private:
     }
 
     std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, NrChildren> Children;
-    std::list<TDataWrapper> Data;
+    std::vector<TDataWrapper> Data;
     Boundary<TVector> Boundary;
     size_t NrObjects = 0;
 };
