@@ -31,6 +31,22 @@ struct Boundary {
         corners[7] = {Max.x, Max.y, Max.z};
         return corners;
     }
+
+    TVector GetMidpoint() const {
+        return {
+                (Min.x + Max.x) / 2,
+                (Min.y + Max.y) / 2,
+                (Min.z + Max.z) / 2
+        };
+    }
+
+    TVector GetSize() const {
+        return {
+                Max.x - Min.x,
+                Max.y - Min.y,
+                Max.z - Min.z
+        };
+    }
 };
 
 template <typename TQuery, typename TDataWrapper>

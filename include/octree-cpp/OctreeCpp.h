@@ -14,17 +14,6 @@ template <VectorLike TVector, typename TData>
 class OctreeCpp {
 private:
     static constexpr size_t MaxData = 8;
-    static constexpr size_t NrChildren = 8;
-    enum class Octant {
-        TopLeftFront = 0,
-        TopRightFront,
-        BottomLeftFront,
-        BottomRightFront,
-        TopLeftBack,
-        TopRightBack,
-        BottomLeftBack,
-        BottomRightBack
-    };
 public:
     using TDataWrapper = DataWrapper<TVector, TData>;
 
@@ -120,6 +109,23 @@ public:
         return NrObjects;
     }
 
+    /**
+     * @return The boundraries of the octree.
+     */
+     [[nodiscard]] std::vector<Boundary<TVector>> GetBoundaries() const {
+        std::vector<::Boundary<TVector>> result;
+        result.push_back(Boundary);
+        for (const auto& child : Children) {
+            if (child) {
+                auto childBoundaries = child->GetBoundaries();
+                for (auto & childchild : childBoundaries) {
+                    result.push_back(childchild);
+                }
+            }
+        }
+        return result;
+    }
+
 private:
     template <IsQuery<TDataWrapper> TQueryObject>
     void QueryInternal(const TQueryObject& QueryObject, std::vector<TDataWrapper>& result) const {
@@ -137,16 +143,20 @@ private:
             }
         }
     }
-    TVector GetMidpoint() const {
-        return {
-            (Boundary.Min.x + Boundary.Max.x) / 2,
-            (Boundary.Min.y + Boundary.Max.y) / 2,
-            (Boundary.Min.z + Boundary.Max.z) / 2
-        };
-    }
 
+    enum class Octant {
+        TopLeftFront = 0,
+        TopRightFront,
+        BottomLeftFront,
+        BottomRightFront,
+        TopLeftBack,
+        TopRightBack,
+        BottomLeftBack,
+        BottomRightBack,
+        Count
+    };
     Octant LocateOctant(const TVector& Vector) const {
-        auto midpoint = GetMidpoint();
+        auto midpoint = Boundary.GetMidpoint();
         if (Vector.x <= midpoint.x) {
             if (Vector.y <= midpoint.y) {
                 return Vector.z <= midpoint.z ? Octant::BottomLeftBack : Octant::TopLeftBack;
@@ -160,7 +170,7 @@ private:
     }
 
     Boundary<TVector> GetBoundraryFromOctant(Octant octant) const {
-        auto midpoint = GetMidpoint();
+        auto midpoint = Boundary.GetMidpoint();
         auto min = Boundary.Min;
         auto max = Boundary.Max;
         switch (octant) {
@@ -222,7 +232,7 @@ private:
         return true;
     }
 
-    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, NrChildren> Children;
+    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, static_cast<int>(Octant::Count)> Children;
     std::vector<TDataWrapper> Data;
     Boundary<TVector> Boundary;
     size_t NrObjects = 0;
