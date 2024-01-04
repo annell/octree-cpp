@@ -11,21 +11,36 @@ struct vec {
     auto operator<=>(const vec&) const = default;
 };
 
+struct vec2d {
+    float x, y;
+    auto operator<=>(const vec2d&) const = default;
+};
+
 using BasicOctree = OctreeCpp<vec, float>;
+using BasicOctree2d = OctreeCpp<vec2d, float>;
 
 TEST(OctreeCppTest, VectorLikeConcept) {
     static_assert(VectorLike<vec>);
-    static_assert(not VectorLike<float>);
+    static_assert(VectorLike3D<vec>);
+    static_assert(not VectorLike3D<vec2d>);
+    static_assert(VectorLike2D_t<vec2d>);
+    static_assert(not VectorLike2D_t<vec>);
+    static_assert(not VectorLike2D_t<float>);
+    static_assert(not VectorLike3D<float>);
 }
 
 TEST(OctreeCppTest, BoundaryConcept) {
     static_assert(std::is_constructible_v<Boundary<vec>>);
+    static_assert(std::is_constructible_v<Boundary<vec2d>>);
     [[maybe_unused]] Boundary<vec> boundary({{0, 0, 0}, {1, 1, 1}});
+    [[maybe_unused]] Boundary<vec2d> boundary2d({{0, 0}, {1, 1}});
 }
 
 TEST(OctreeCppTest, DataWrapperConcept) {
     static_assert(std::is_constructible_v<DataWrapper<vec, float>>);
+    static_assert(std::is_constructible_v<DataWrapper<vec2d, float>>);
     [[maybe_unused]] DataWrapper<vec, float> data;
+    [[maybe_unused]] DataWrapper<vec2d, float> data2d;
 }
 
 TEST(OctreeCppTest, IsQueryConcept) {
@@ -37,7 +52,11 @@ TEST(OctreeCppTest, IsQueryConcept) {
 
 TEST(OctreeCppTest, OctreeConstructible) {
     static_assert(std::is_constructible_v<OctreeCpp<vec, float>, Boundary<vec>>);
+    static_assert(std::is_constructible_v<OctreeCpp<vec2d, float>, Boundary<vec2d>>);
+    static_assert(not std::is_constructible_v<OctreeCpp<vec2d, float>, Boundary<vec>>);
+    static_assert(not std::is_constructible_v<OctreeCpp<vec, float>, Boundary<vec2d>>);
     [[maybe_unused]] BasicOctree octree({});
+    [[maybe_unused]] BasicOctree2d octree2d({});
 }
 
 TEST(OctreeCppTest, OctreeAdd) {
@@ -289,4 +308,23 @@ TEST(OctreeCppTest, OctreeQueryCylinderMiss) {
 
     octree.Add(BasicOctree::TDataWrapper{{1.0f, 0.0f, 1.0f}, 1.0f});
     EXPECT_EQ(octree.Query(query).size(), 0);
+}
+
+TEST(OctreeCppTest, OctreeQueryCircleHit2d) {
+    BasicOctree2d octree({{0, 0}, {1, 1}});
+    EXPECT_EQ(octree.Query(CircleQuery<BasicOctree2d::TDataWrapper>{{0.5f, 0.5f}, 0.5f}).size(), 0);
+
+    octree.Add({{0.5f, 0.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree2d::TDataWrapper>{{0.5f, 0.5f}, 0.5f}).size(), 1);
+}
+
+
+TEST(OctreeCppTest, OctreeQueryCircle2dHitNegative) {
+    BasicOctree2d octree({{-100, -100}, {100, 100}});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree2d::TDataWrapper>{{0.5f, 0.5f}, 0.5f}).size(), 0);
+
+    octree.Add({{-20.0f, -20.5f}, 1.0f});
+    octree.Add({{-5.0f, -20.5f}, 1.0f});
+    octree.Add({{-5.0f, -5.5f}, 1.0f});
+    EXPECT_EQ(octree.Query(SphereQuery<BasicOctree2d::TDataWrapper>{{-20.0f, -70.0f}, 50.0f}).size(), 1);
 }

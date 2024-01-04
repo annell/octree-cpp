@@ -10,12 +10,16 @@
  * @tparam TVector "Bring your own", Vector class that you want to use. Needs to fufil VectorLike concept.
  * @tparam TData Data blob that should be paired up with the added object.
  */
-template <VectorLike TVector, typename TData>
+template <typename TVector, typename TData>
+requires VectorLike<TVector>
 class OctreeCpp {
 private:
     static constexpr size_t MaxData = 8;
+    using Section = std::conditional_t<isVectorLike3D<TVector>(), Octant, Quadrant>;
+
 public:
     using TDataWrapper = DataWrapper<TVector, TData>;
+    using TBoundary = Boundary<TVector>;
 
     /**
      * Not query, inverts whatever query it has as input.
@@ -27,6 +31,11 @@ public:
      * Sphere query, for finding objects within given sphere.
      */
     using Sphere = SphereQuery<TDataWrapper>;
+
+    /**
+     * Circle query, for finding objects within given circle.
+     */
+    using Circle = CircleQuery<TDataWrapper>;
 
     /**
      * Cylinder query, for finding objects within given cylinder.
@@ -58,7 +67,7 @@ public:
      *
      * @param Boundary min and max X, Y, Z values of the octree.
      */
-    explicit OctreeCpp(Boundary<TVector> Boundary) : Boundary(Boundary) {
+    explicit OctreeCpp(TBoundary Boundary) : Boundary(Boundary) {
         Data.reserve(MaxData);
     }
 
@@ -79,11 +88,11 @@ public:
             NrObjects++;
             return;
         }
-        auto octant = LocateOctant(DataWrapper.Vector);
-        if (!HasChild(octant)) {
-            CreateChild(octant);
+        Section section = LocateOctant(DataWrapper.Vector, Boundary.GetMidpoint());
+        if (!HasChild(section)) {
+            CreateChild(section);
         }
-        AddToChild(octant, DataWrapper);
+        AddToChild(section, DataWrapper);
         NrObjects++;
     }
 
@@ -112,8 +121,8 @@ public:
     /**
      * @return The boundraries of the octree.
      */
-     [[nodiscard]] std::vector<Boundary<TVector>> GetBoundaries() const {
-        std::vector<::Boundary<TVector>> result;
+     [[nodiscard]] std::vector<TBoundary> GetBoundaries() const {
+        std::vector<TBoundary> result;
         result.push_back(Boundary);
         for (const auto& child : Children) {
             if (child) {
@@ -144,67 +153,15 @@ private:
         }
     }
 
-    enum class Octant {
-        TopLeftFront = 0,
-        TopRightFront,
-        BottomLeftFront,
-        BottomRightFront,
-        TopLeftBack,
-        TopRightBack,
-        BottomLeftBack,
-        BottomRightBack,
-        Count
-    };
-    Octant LocateOctant(const TVector& Vector) const {
-        auto midpoint = Boundary.GetMidpoint();
-        if (Vector.x <= midpoint.x) {
-            if (Vector.y <= midpoint.y) {
-                return Vector.z <= midpoint.z ? Octant::BottomLeftBack : Octant::TopLeftBack;
-            }
-            return Vector.z <= midpoint.z ? Octant::BottomLeftFront : Octant::TopLeftFront;
-        }
-        if (Vector.y <= midpoint.y) {
-            return Vector.z <= midpoint.z ? Octant::BottomRightBack : Octant::TopRightBack;
-        }
-        return Vector.z <= midpoint.z ? Octant::BottomRightFront : Octant::TopRightFront;
-    }
-
-    Boundary<TVector> GetBoundraryFromOctant(Octant octant) const {
-        auto midpoint = Boundary.GetMidpoint();
-        auto min = Boundary.Min;
-        auto max = Boundary.Max;
-        switch (octant) {
-            case Octant::BottomLeftBack:
-                return {min, midpoint};
-            case Octant::BottomLeftFront:
-                return {{min.x, midpoint.y, min.z}, {midpoint.x, max.y, midpoint.z}};
-            case Octant::BottomRightBack:
-                return {{midpoint.x, min.y, min.z}, {max.x, midpoint.y, midpoint.z}};
-            case Octant::BottomRightFront:
-                return {{midpoint.x, midpoint.y, min.z}, {max.x, max.y, midpoint.z}};
-            case Octant::TopLeftBack:
-                return {{min.x, min.y, midpoint.z}, {midpoint.x, midpoint.y, max.z}};
-            case Octant::TopLeftFront:
-                return {{min.x, midpoint.y, midpoint.z}, {midpoint.x, max.y, max.z}};
-            case Octant::TopRightBack:
-                return {{midpoint.x, min.y, midpoint.z}, {max.x, midpoint.y, max.z}};
-            case Octant::TopRightFront:
-                return {midpoint, max};
-            default:
-                throw std::runtime_error("Invalid octant");
-        }
-        return {};
-    }
-
-    void CreateChild(Octant octant) {
-        if (HasChild(octant)) {
+    void CreateChild(Section section) {
+        if (HasChild(section)) {
             throw std::runtime_error("Child already exists");
         }
-        Children.at(static_cast<int>(octant)) = std::move(std::make_unique<OctreeCpp<TVector, TData>>(
-                GetBoundraryFromOctant(octant)));
+        Children.at(static_cast<int>(section)) = std::move(std::make_unique<OctreeCpp<TVector, TData>>(
+                GetBoundraryFromSection(section, Boundary)));
     }
 
-    void AddToChild(Octant octant, const TDataWrapper& DataWrapper) {
+    void AddToChild(Section octant, const TDataWrapper& DataWrapper) {
         int index = static_cast<int>(octant);
         if (!Children.at(index)) {
             throw std::runtime_error("Child does not exist");
@@ -212,7 +169,7 @@ private:
         Children.at(index)->Add(DataWrapper);
     }
 
-    bool HasChild(Octant octant) const {
+    bool HasChild(Section octant) const {
         size_t index = static_cast<int>(octant);
         if (index > Children.size()) {
             throw std::runtime_error("Invalid octant");
@@ -232,8 +189,8 @@ private:
         return true;
     }
 
-    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, static_cast<int>(Octant::Count)> Children;
+    std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, static_cast<int>(Section::Count)> Children;
     std::vector<TDataWrapper> Data;
-    Boundary<TVector> Boundary;
+    TBoundary Boundary;
     size_t NrObjects = 0;
 };
