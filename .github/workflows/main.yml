@@ -20,6 +20,9 @@ jobs:
     steps:
     - name: Install gtest manually
       run: brew install googletest
+    
+    - name: Install google benchmark manually
+      run: brew install google-benchmark
     - uses: actions/checkout@v3
 
     - name: Configure CMake
