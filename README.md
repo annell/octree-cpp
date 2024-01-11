@@ -1,4 +1,4 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/annell/octree-cpp/main.yml)
 
 # octree-cpp
