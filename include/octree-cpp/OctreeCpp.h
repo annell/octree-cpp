@@ -68,7 +68,7 @@ public:
      *
      * @param Boundary min and max X, Y, Z values of the octree.
      */
-    explicit OctreeCpp(TBoundary Boundary) : Boundary(Boundary) {
+    explicit OctreeCpp(TBoundary Boundary) : BoundaryData(Boundary) {
         Data.reserve(MaxData);
     }
 
@@ -77,7 +77,7 @@ public:
      * @param DataWrapper
      */
     void Add(const TDataWrapper& DataWrapper) {
-        if (!IsPointInBoundrary(DataWrapper.Vector, Boundary)) {
+        if (!IsPointInBoundrary(DataWrapper.Vector, BoundaryData)) {
             throw std::runtime_error("Vector is outside of boundary");
         }
 
@@ -89,7 +89,7 @@ public:
             NrObjects++;
             return;
         }
-        Section section = LocateOctant(DataWrapper.Vector, Boundary.GetMidpoint());
+        Section section = LocateOctant(DataWrapper.Vector, BoundaryData.GetMidpoint());
         if (!HasChild(section)) {
             CreateChild(section);
         }
@@ -124,7 +124,7 @@ public:
      */
      [[nodiscard]] std::vector<TBoundary> GetBoundaries() const {
         std::vector<TBoundary> result;
-        result.push_back(Boundary);
+        result.push_back(BoundaryData);
         for (const auto& child : Children) {
             if (child) {
                 auto childBoundaries = child->GetBoundaries();
@@ -148,7 +148,7 @@ private:
             return;
         }
         for (const auto& child : Children) {
-            if (child && QueryObject.Covers(child->Boundary)) {
+            if (child && QueryObject.Covers(child->BoundaryData)) {
                 child->QueryInternal(QueryObject, result);
             }
         }
@@ -159,7 +159,7 @@ private:
             throw std::runtime_error("Child already exists");
         }
         Children.at(static_cast<int>(section)) = std::move(std::make_unique<OctreeCpp<TVector, TData>>(
-                GetBoundraryFromSection(section, Boundary)));
+                GetBoundraryFromSection(section, BoundaryData)));
     }
 
     void AddToChild(Section octant, const TDataWrapper& DataWrapper) {
@@ -183,7 +183,7 @@ private:
             return false;
         }
         for (const auto& data : Data) {
-            if (!IsPointInBoundrary(data.Vector, Boundary)) {
+            if (!IsPointInBoundrary(data.Vector, BoundaryData)) {
                 return false;
             }
         }
@@ -192,6 +192,6 @@ private:
 
     std::array<std::unique_ptr<OctreeCpp<TVector, TData>>, static_cast<int>(Section::Count)> Children;
     std::vector<TDataWrapper> Data;
-    TBoundary Boundary;
+    TBoundary BoundaryData;
     size_t NrObjects = 0;
 };
