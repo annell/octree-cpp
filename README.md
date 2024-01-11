@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![example branch parameter](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=main)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/annell/octree-cpp/main.yml)
 
 # octree-cpp
 A Octree implementation in C++ built to work with your own vector class and any generic data blob stored along side its position in the world.
