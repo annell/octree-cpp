@@ -2,7 +2,6 @@
 
 #include "OctreeUtil.h"
 #include <memory>
-#include <stdexcept>
 
 /**
  * A octree implementation with Bring your own vector class depending on what you use
