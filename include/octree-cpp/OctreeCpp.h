@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OctreeUtil.h"
+#include "OctreeQuery.h"
 #include <memory>
 
 /**
@@ -36,7 +37,7 @@ public:
     /**
      * Circle query, for finding objects within given circle.
      */
-    //using Circle = CircleQuery<TDataWrapper>;
+    // using Circle = CircleQuery<TDataWrapper>;
 
     /**
      * Cylinder query, for finding objects within given cylinder.
