@@ -30,7 +30,6 @@ struct SphereQuery {
 };
 
 template <IsDataWrapper TDataWrapper>
-requires VectorLike2D_t<typename TDataWrapper::VectorType>
 struct CircleQuery {
     const typename TDataWrapper::VectorType Midpoint = {0, 0};
     const float Radius = 0.0f;
