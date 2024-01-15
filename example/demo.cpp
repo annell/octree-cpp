@@ -3,18 +3,14 @@
 //
 
 #include "polyscope/polyscope.h"
-#include "../src/OctreeCpp.h"
+#include <octree-cpp/OctreeCpp.h>
 #include "polyscope/point_cloud.h"
 #include <chrono>
 
 template<>
-float DistanceBoxSphere(const Boundary<glm::vec3>& Box, const glm::vec3& SphereCenter, float SphereRadius) {
+bool CheckOverlapp(const Boundary<glm::vec3>& Box, const glm::vec3& SphereCenter, float SphereRadius) {
     const glm::vec3 closestPoint = glm::clamp(SphereCenter, Box.Min, Box.Max);
-    if (glm::distance(closestPoint, SphereCenter) > SphereRadius) {
-        return glm::distance(closestPoint, SphereCenter) - SphereRadius;
-    } else {
-        return 0.0f;
-    }
+    return glm::distance(closestPoint, SphereCenter) > SphereRadius;
 }
 
 void app1() {

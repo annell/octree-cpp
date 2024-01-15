@@ -5,12 +5,24 @@
 A Octree implementation in C++ built to work with your own vector class and any generic data blob stored along side its position in the world.
 The queries are very easily extendable via templates if there is some specific usecase that you want to query on.
 
-The usecase for this octree is to be able to, quickly do complex queries in 3D space.
+The usecase for this octree is to be able to, quickly do complex queries in 2D or 3D space.
+(Technically a octree is a 3D data structure, but it can be used in 2D space as well and it will at compile time convert to a quadtree.)
 
 ## What is Octree?
 > An octree is a tree data structure in which each internal node has exactly eight children. Octrees are most often used to partition a three-dimensional space by recursively subdividing it into eight octants. Octrees are the three-dimensional analog of quadtrees. The word is derived from oct (Greek root meaning "eight") + tree. Octrees are often used in 3D graphics and 3D game engines.
 
 [- Wikipedia](https://en.wikipedia.org/wiki/Octree)
+
+## Features
+- Bring your own vector class, no need to adapt to a specific vector class defined in this library.
+- Header only implementation.
+- Simple cmake library integration.
+- Possible to use both at 2D or 3D space, and its automatically set at compile time, transforms between a Octree in 3d space and a Quadtree in 2d space depending on the provided vector.
+- Possible to use any generic data blob as payload.
+- Possible to extend the queries with your own custom queries, only need to satisfy the IsQuery concept.
+- Queries can be combined with AND, OR, NOT and Predicate to build up more complex shapes.
+- Very quickly builds up a new tree when the world changes.
+- Extensive unit testing of library.
 
 ## How to use
 The octree is very light weight to use, the basic usecase is:
