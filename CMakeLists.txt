@@ -9,7 +9,7 @@ add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(${PROJECT_NAME} INTERFACE "include")
 
 add_subdirectory("tests")
-if (NOT DEFINED GITHUB_ACTION)
+if (NOT DEFINED $ENV{GITHUB_ACTION})
     add_subdirectory("example")
     add_subdirectory("benchmark")
 endif()
