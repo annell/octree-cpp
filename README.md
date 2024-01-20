@@ -33,11 +33,13 @@ Octree octree({{0, 0, 0}, {1, 1, 1}});
 ```
 Here the vector class is called vec and the payload is a float, and it can be whetever you want.
 The min / max values for this octree is set to be [0, 0, 0] -> [1, 1, 1]
+
 2. Add data to the octree.
 ```c++
 octree.Add({.Vector{0.5f, 0.5f, 0.5f}, .Data{1.0f}});
 ```
 The payload is copied to the octree by default.
+
 3. Query the octree for _hits_.
 ```c++
 auto hits = octree.Query(Octree::Sphere{{0.5f, 0.5f, 0.5f}, 0.5f});
